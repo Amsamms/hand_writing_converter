@@ -33,10 +33,6 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect }) =
     event.stopPropagation();
   };
   
-  const handleClick = () => {
-    inputRef.current?.click();
-  }
-
   return (
     <div className="flex flex-col items-center justify-center w-full group">
       <label
@@ -44,7 +40,6 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect }) =
         className="relative flex flex-col items-center justify-center w-full h-64 border-2 border-gray-600/50 border-dashed rounded-lg cursor-pointer bg-dark-bg/30 hover:border-brand-primary transition-all duration-300 overflow-hidden"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
-        onClick={handleClick}
       >
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-brand-primary to-brand-secondary opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
         <div className="flex flex-col items-center justify-center pt-5 pb-6 z-10">
