@@ -5,7 +5,7 @@ import { ImageCropper } from './components/ImageCropper';
 import { ResultDisplay } from './components/ResultDisplay';
 import { Button } from './components/Button';
 import { processHandwriting } from './services/geminiService';
-import { downloadCsv } from './utils/fileUtils';
+import { downloadCsv, resizeImage } from './utils/fileUtils';
 import type { GeminiResponse } from './types';
 
 const App: React.FC = () => {
@@ -47,7 +47,11 @@ const App: React.FC = () => {
     setResult(null);
 
     try {
-      const response = await processHandwriting(croppedImage.file);
+      // Resize the image for performance before sending it to the API
+      const resizedBlob = await resizeImage(croppedImage.file, 1024);
+      const resizedFile = new File([resizedBlob], croppedImage.file.name, { type: resizedBlob.type });
+
+      const response = await processHandwriting(resizedFile);
       setResult(response);
       setEditableText(response.textContent);
     } catch (err) {

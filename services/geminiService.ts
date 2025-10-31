@@ -1,5 +1,4 @@
-
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { fileToBase64 } from "../utils/fileUtils";
 import type { GeminiResponse } from "../types";
 
@@ -36,6 +35,33 @@ const responseSchema = {
   required: ["isTable", "textContent"],
 };
 
+const API_TIMEOUT = 90000; // 90 seconds
+
+/**
+ * Wraps a promise with a timeout.
+ * @param promise The promise to wrap.
+ * @param ms The timeout in milliseconds.
+ * @param timeoutMessage The message for the timeout error.
+ * @returns A new promise that will reject if the timeout is reached.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, timeoutMessage: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(timeoutMessage));
+    }, ms);
+
+    promise
+      .then(result => {
+        clearTimeout(timeoutId);
+        resolve(result);
+      })
+      .catch(error => {
+        clearTimeout(timeoutId);
+        reject(error);
+      });
+  });
+}
+
 export const processHandwriting = async (imageFile: File): Promise<GeminiResponse> => {
   if (!imageFile.type.startsWith("image/")) {
     throw new Error("Invalid file type. Please upload an image.");
@@ -59,8 +85,8 @@ export const processHandwriting = async (imageFile: File): Promise<GeminiRespons
   `;
   
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+    const apiCall = ai.models.generateContent({
+      model: 'gemini-2.5-pro',
       contents: {
           parts: [imagePart, { text: prompt }],
       },
@@ -70,18 +96,34 @@ export const processHandwriting = async (imageFile: File): Promise<GeminiRespons
       },
     });
 
+    // FIX: Explicitly type the response from the Gemini API call to fix "Property 'text' does not exist on type 'unknown'" error.
+    const response: GenerateContentResponse = await withTimeout(
+        apiCall, 
+        API_TIMEOUT, 
+        'The AI model took too long to respond. Please try again.'
+    );
+
     const jsonString = response.text.trim();
+    if (!jsonString) {
+        throw new Error("The AI model returned an empty response. The handwriting might be unclear or the image quality too low.");
+    }
     const parsedResponse = JSON.parse(jsonString) as GeminiResponse;
 
     // A little extra validation
     if (typeof parsedResponse.isTable !== 'boolean' || typeof parsedResponse.textContent !== 'string') {
-        throw new Error("Invalid JSON structure received from API.");
+        throw new Error("Invalid JSON structure received from the AI model.");
     }
 
     return parsedResponse;
 
   } catch (error) {
     console.error("Gemini API call failed:", error);
-    throw new Error("Could not get a valid response from the AI model.");
+    if (error instanceof Error) {
+        // Re-throw the specific error message (e.g., from timeout or API)
+        // so the UI can display it.
+        throw error;
+    }
+    // Fallback for non-Error objects
+    throw new Error("An unexpected error occurred while contacting the AI model.");
   }
 };
