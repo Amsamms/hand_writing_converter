@@ -42,9 +42,9 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ isLoading, error, 
   }
 
   return (
-    <div className="mt-8 w-full animate-fade-in">
-        <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-semibold text-dark-text">Conversion Result</h2>
+    <div className="mt-8 w-full animate-fade-in" style={{ animation: 'fadeIn 0.5s ease-in-out' }}>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+            <h2 className="text-2xl font-bold text-dark-text">Conversion Result</h2>
             {result.isTable && (
                 <Button onClick={onDownloadCsv} size="sm">
                     <CsvIcon />
@@ -52,11 +52,18 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ isLoading, error, 
                 </Button>
             )}
       </div>
-      <div className="p-4 sm:p-6 bg-gray-800/50 rounded-lg border border-gray-700 max-h-[50vh] overflow-y-auto">
-        <pre className="text-dark-text whitespace-pre-wrap font-sans text-base leading-relaxed">
+      <div className="p-4 sm:p-6 bg-dark-bg/50 rounded-lg border border-gray-700/50 max-h-[50vh] overflow-y-auto">
+        <pre className="text-dark-text whitespace-pre-wrap font-mono text-base leading-relaxed bg-transparent">
           {result.textContent}
         </pre>
       </div>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation-name: fadeIn; }
+      `}</style>
     </div>
   );
 };

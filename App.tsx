@@ -1,7 +1,7 @@
-
 import React, { useState, useCallback } from 'react';
 import { Header } from './components/Header';
 import { ImageUploader } from './components/ImageUploader';
+import { ImageCropper } from './components/ImageCropper';
 import { ResultDisplay } from './components/ResultDisplay';
 import { Button } from './components/Button';
 import { processHandwriting } from './services/geminiService';
@@ -9,22 +9,35 @@ import { downloadCsv } from './utils/fileUtils';
 import type { GeminiResponse } from './types';
 
 const App: React.FC = () => {
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [originalFile, setOriginalFile] = useState<{ file: File, url: string } | null>(null);
+  const [croppedImage, setCroppedImage] = useState<{ file: File, url: string } | null>(null);
+  const [isCropping, setIsCropping] = useState<boolean>(false);
+  
   const [result, setResult] = useState<GeminiResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleImageSelect = (file: File) => {
-    setImageFile(file);
-    setImageUrl(URL.createObjectURL(file));
+    setOriginalFile({ file, url: URL.createObjectURL(file) });
+    setIsCropping(true);
+    setCroppedImage(null);
     setResult(null);
     setError(null);
   };
 
+  const handleCropComplete = (imageBlob: Blob) => {
+    if (!originalFile) return;
+
+    const file = new File([imageBlob], originalFile.file.name, { type: imageBlob.type });
+    const url = URL.createObjectURL(imageBlob);
+    
+    setCroppedImage({ file, url });
+    setIsCropping(false);
+  };
+
   const handleConvertClick = useCallback(async () => {
-    if (!imageFile) {
-      setError("Please select an image first.");
+    if (!croppedImage) {
+      setError("Please select and crop an image first.");
       return;
     }
 
@@ -33,7 +46,7 @@ const App: React.FC = () => {
     setResult(null);
 
     try {
-      const response = await processHandwriting(imageFile);
+      const response = await processHandwriting(croppedImage.file);
       setResult(response);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -42,7 +55,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [imageFile]);
+  }, [croppedImage]);
 
   const handleDownloadCsv = () => {
     if (result?.isTable && result.tableData) {
@@ -52,50 +65,74 @@ const App: React.FC = () => {
   };
 
   const handleReset = () => {
-    setImageFile(null);
-    setImageUrl(null);
+    setOriginalFile(null);
+    setCroppedImage(null);
+    setIsCropping(false);
     setResult(null);
     setError(null);
     setIsLoading(false);
-  }
+  };
+
+  const handleRecrop = () => {
+    setIsCropping(true);
+    setCroppedImage(null);
+    setResult(null);
+    setError(null);
+  };
 
   return (
-    <div className="min-h-screen bg-dark-bg text-dark-text flex flex-col items-center p-4 sm:p-6 lg:p-8">
-      <Header />
-      <main className="w-full max-w-4xl mx-auto flex-grow flex flex-col items-center">
-        <div className="bg-dark-card rounded-xl shadow-2xl p-6 sm:p-8 w-full transition-all duration-300">
-          {!imageUrl && (
-            <ImageUploader onImageSelect={handleImageSelect} />
-          )}
-          
-          {imageUrl && (
-            <div className="flex flex-col items-center w-full">
-              <div className="w-full max-w-md mb-6 border-2 border-dashed border-gray-600 rounded-lg p-2">
-                <img src={imageUrl} alt="Handwriting preview" className="rounded-md w-full h-auto object-contain max-h-80" />
-              </div>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8 font-sans">
+      <div className="w-full max-w-4xl mx-auto">
+        <Header />
+        <main className="relative w-full">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-brand-primary to-brand-secondary rounded-2xl blur-lg opacity-20 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+            <div className="relative bg-dark-card rounded-2xl shadow-2xl p-6 sm:p-8 w-full transition-all duration-300">
+            
+            {!originalFile && (
+                <ImageUploader onImageSelect={handleImageSelect} />
+            )}
+            
+            {originalFile && isCropping && (
+                <ImageCropper 
+                    src={originalFile.url}
+                    imageFile={originalFile.file}
+                    onCropComplete={handleCropComplete}
+                    onCancel={handleReset}
+                />
+            )}
 
-              <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
-                 <Button onClick={handleConvertClick} disabled={isLoading} className="w-full sm:w-auto">
-                    {isLoading ? 'Analyzing...' : 'Convert Handwriting'}
-                </Button>
-                <Button onClick={handleReset} variant="secondary" disabled={isLoading} className="w-full sm:w-auto">
-                    Upload Another
-                </Button>
-              </div>
+            {originalFile && !isCropping && croppedImage && (
+                <div className="flex flex-col items-center w-full">
+                    <div className="w-full max-w-md mb-6 border-2 border-dashed border-gray-600 rounded-lg p-2">
+                        <img src={croppedImage.url} alt="Cropped handwriting preview" className="rounded-md w-full h-auto object-contain max-h-80" />
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-4 w-full justify-center">
+                        <Button onClick={handleConvertClick} disabled={isLoading} className="w-full sm:w-auto">
+                            {isLoading ? 'Analyzing...' : 'Convert Handwriting'}
+                        </Button>
+                        <Button onClick={handleRecrop} variant="secondary" disabled={isLoading} className="w-full sm:w-auto">
+                            Re-crop
+                        </Button>
+                        <Button onClick={handleReset} variant="secondary" disabled={isLoading} className="w-full sm:w-auto">
+                            Upload Another
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            <ResultDisplay
+                isLoading={isLoading}
+                error={error}
+                result={result}
+                onDownloadCsv={handleDownloadCsv}
+            />
             </div>
-          )}
-
-          <ResultDisplay
-            isLoading={isLoading}
-            error={error}
-            result={result}
-            onDownloadCsv={handleDownloadCsv}
-          />
-        </div>
-        <footer className="text-center py-6 mt-8 text-dark-subtle text-sm">
+        </main>
+        <footer className="text-center py-6 mt-8 text-dark-subtle text-sm opacity-80">
           <p>Made by amsamms. Powered by the Gemini API.</p>
         </footer>
-      </main>
+      </div>
     </div>
   );
 };
