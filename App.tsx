@@ -14,6 +14,7 @@ const App: React.FC = () => {
   const [isCropping, setIsCropping] = useState<boolean>(false);
   
   const [result, setResult] = useState<GeminiResponse | null>(null);
+  const [editableText, setEditableText] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,6 +49,7 @@ const App: React.FC = () => {
     try {
       const response = await processHandwriting(croppedImage.file);
       setResult(response);
+      setEditableText(response.textContent);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
       setError(`Failed to process image: ${errorMessage}`);
@@ -56,6 +58,10 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   }, [croppedImage]);
+  
+  const handleTextChange = (newText: string) => {
+    setEditableText(newText);
+  };
 
   const handleDownloadCsv = () => {
     if (result?.isTable && result.tableData) {
@@ -69,6 +75,7 @@ const App: React.FC = () => {
     setCroppedImage(null);
     setIsCropping(false);
     setResult(null);
+    setEditableText('');
     setError(null);
     setIsLoading(false);
   };
@@ -77,6 +84,7 @@ const App: React.FC = () => {
     setIsCropping(true);
     setCroppedImage(null);
     setResult(null);
+    setEditableText('');
     setError(null);
   };
 
@@ -125,6 +133,8 @@ const App: React.FC = () => {
                 isLoading={isLoading}
                 error={error}
                 result={result}
+                editableText={editableText}
+                onTextChange={handleTextChange}
                 onDownloadCsv={handleDownloadCsv}
             />
             </div>
