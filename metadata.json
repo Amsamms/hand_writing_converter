@@ -1,0 +1,5 @@
+{
+  "name": "Handwriting to Text & Table Converter",
+  "description": "Upload an image of your handwriting to convert it into digital text. If a table is detected, you can download the data as a CSV file.",
+  "requestFramePermissions": []
+}
