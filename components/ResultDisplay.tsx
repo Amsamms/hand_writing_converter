@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { GeminiResponse } from '../types';
 import { Spinner } from './Spinner';

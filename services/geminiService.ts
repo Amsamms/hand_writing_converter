@@ -20,7 +20,7 @@ const responseSchema = {
     },
     textContent: {
       type: Type.STRING,
-      description: "The full transcribed text from the image.",
+      description: "The full transcribed text from the image, preserving original layout and line breaks.",
     },
     tableData: {
       type: Type.ARRAY,
@@ -51,11 +51,11 @@ export const processHandwriting = async (imageFile: File): Promise<GeminiRespons
   };
 
   const prompt = `
-    Analyze the handwriting in this image.
-    1. Transcribe all text content accurately.
-    2. Determine if the overall structure of the content is a table.
-    3. If it is a table, extract the data into a structured array of arrays, where each inner array represents a row of cells.
-    4. Return the result in the specified JSON format. The 'tableData' field should be null or omitted if it's not a table.
+    Analyze the handwriting in this image with high precision.
+    1. Transcribe all text content exactly as it appears, **preserving the original layout, line breaks, spacing, and structure.** The transcription in the 'textContent' field should visually match the arrangement in the image as closely as possible.
+    2. After transcribing, analyze the content to determine if it contains a table or tabular data.
+    3. If a table is present, extract ONLY the table data into a structured array of arrays for the 'tableData' field, where each inner array represents a row of the table.
+    4. Return the result in the specified JSON format. 'textContent' must contain the full, formatted transcription. 'tableData' should contain only the table data, or be null if no table is found.
   `;
   
   try {

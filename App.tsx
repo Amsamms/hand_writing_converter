@@ -93,7 +93,7 @@ const App: React.FC = () => {
           />
         </div>
         <footer className="text-center py-6 mt-8 text-dark-subtle text-sm">
-          <p>Powered by Gemini API</p>
+          <p>Made by amsamms. Powered by the Gemini API.</p>
         </footer>
       </main>
     </div>
